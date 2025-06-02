@@ -1,0 +1,84 @@
+# --------------------------------------------------
+# 📦 1. Import Libraries
+# --------------------------------------------------
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.tree import DecisionTreeClassifier, export_graphviz
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+import graphviz
+
+# --------------------------------------------------
+# 📥 2. Load and Prepare Dataset
+# --------------------------------------------------
+url = 'https://raw.githubusercontent.com/ansh941/Machine-Learning-Projects/main/Heart%20Disease%20Prediction/dataset.csv'
+df = pd.read_csv(url)
+
+X = df.drop('target', axis=1)
+y = df['target']
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# --------------------------------------------------
+# 🌳 3. Train and Visualize Decision Tree
+# --------------------------------------------------
+dt_model = DecisionTreeClassifier(random_state=42)
+dt_model.fit(X_train, y_train)
+dt_pred = dt_model.predict(X_test)
+
+print(f"[Decision Tree] Test Accuracy: {accuracy_score(y_test, dt_pred):.2f}")
+
+# Visualize tree
+dot_data = export_graphviz(dt_model, out_file=None,
+                           feature_names=X.columns,
+                           class_names=['No Disease', 'Disease'],
+                           filled=True, rounded=True)
+graph = graphviz.Source(dot_data)
+graph.render("decision_tree")
+graph.view()
+
+# --------------------------------------------------
+# 📉 4. Analyze Overfitting with Varying Depth
+# --------------------------------------------------
+depths = [2, 3, 5, 10, None]
+print("\n[Decision Tree Depth Analysis]")
+for depth in depths:
+    model = DecisionTreeClassifier(max_depth=depth, random_state=42)
+    model.fit(X_train, y_train)
+    train_acc = model.score(X_train, y_train)
+    test_acc = model.score(X_test, y_test)
+    print(f"Depth={depth} -> Train Acc: {train_acc:.2f}, Test Acc: {test_acc:.2f}")
+
+# --------------------------------------------------
+# 🌲 5. Train Random Forest and Compare Accuracy
+# --------------------------------------------------
+rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
+rf_model.fit(X_train, y_train)
+rf_pred = rf_model.predict(X_test)
+
+print(f"\n[Random Forest] Test Accuracy: {accuracy_score(y_test, rf_pred):.2f}")
+
+# --------------------------------------------------
+# 📊 6. Feature Importance Visualization
+# --------------------------------------------------
+importances = rf_model.feature_importances_
+feat_imp = pd.Series(importances, index=X.columns).sort_values(ascending=False)
+
+plt.figure(figsize=(10, 6))
+sns.barplot(x=feat_imp, y=feat_imp.index)
+plt.title("Random Forest Feature Importances")
+plt.xlabel("Importance Score")
+plt.tight_layout()
+plt.show()
+
+# --------------------------------------------------
+# 🔁 7. Cross-Validation Comparison
+# --------------------------------------------------
+cv_dt = cross_val_score(dt_model, X, y, cv=5)
+cv_rf = cross_val_score(rf_model, X, y, cv=5)
+
+print(f"\n[Cross-Validation]")
+print(f"Decision Tree CV Accuracy: {cv_dt.mean():.2f}")
+print(f"Random Forest CV Accuracy: {cv_rf.mean():.2f}")
